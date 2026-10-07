@@ -1,0 +1,19 @@
+# virtual environment
+.venv/
+
+# ruff
+.ruff_cache/
+
+# environment variable files
+.env
+.env.*
+
+# git
+.gitignore
+
+# docker
+Dockerfile
+.dockerignore
+
+# docker Compose
+docker-compose.yml
