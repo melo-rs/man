@@ -1,4 +1,4 @@
-name: Backend
+name: Run Checks
 
 on:
   pull_request:
@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Lint and types
+  checks:
+    name: Run Checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -30,7 +30,7 @@ jobs:
       - run: uv run task type_check
 
   test:
-    name: Tests
+    name: Run Tests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
