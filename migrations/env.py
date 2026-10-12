@@ -38,7 +38,9 @@ target_metadata = Model.metadata
 config.set_main_option(
     "sqlalchemy.url",
     # Escape %-encoding signs to avoid Alembic treating them as interpolation markers
-    settings.get_postgres_dsn("asyncpg").replace("%", "%%"),
+    config.attributes.get(
+        "sqlalchemy.url", settings.get_postgres_dsn("asyncpg")
+    ).replace("%", "%%"),
 )
 
 # other values from the config, defined by the needs of env.py,

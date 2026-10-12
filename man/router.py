@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
+from man.products.router import router as products_router
+
 router = APIRouter(prefix="/v1")
 
-# /users
-# router.include_router(users_router)
+router.include_router(products_router)

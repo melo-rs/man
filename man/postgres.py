@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 
 from fastapi import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
+
 from man.config import settings
 from man.kit.db.postgres import (
     AsyncEngine,
@@ -8,7 +10,6 @@ from man.kit.db.postgres import (
     AsyncSessionMaker,
 )
 from man.kit.db.postgres import create_async_engine as _create_async_engine
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 def create_async_engine(*, pool_logging_name: str | None = None) -> AsyncEngine:

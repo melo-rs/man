@@ -13,3 +13,12 @@ wheels/
 .env
 .env.*
 !.env.template
+!.env.test
+
+# test reports and caches
+.coverage*
+coverage.xml
+htmlcov/
+test-results.xml
+.pytest_cache/
+.ruff_cache/

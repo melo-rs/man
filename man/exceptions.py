@@ -36,7 +36,9 @@ class ManError(Exception):
 
 
 class Unauthorized(ManError):
-    def __init__(self, message: str = "Requires authentication", status_code: int = 401):
+    def __init__(
+        self, message: str = "Requires authentication", status_code: int = 401
+    ):
         super().__init__(
             message,
             status_code,
@@ -53,5 +55,7 @@ class Forbidden(ManError):
 
 
 class ResourceMissing(ManError):
-    def __init__(self, message: str = "This resource could not be found", status_code: int = 404):
+    def __init__(
+        self, message: str = "This resource could not be found", status_code: int = 404
+    ):
         super().__init__(message, status_code)

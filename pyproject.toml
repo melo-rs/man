@@ -14,14 +14,49 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pyright>=1.1.414", "ruff>=0.16.10"]
+dev = [
+    "anyio>=4.15.1",
+    "httpx>=0.28.1",
+    "pyright>=1.1.414",
+    "pytest>=8.4,<10",
+    "pytest-cov>=7.0",
+    "pytest-mock>=3.14",
+    "pytest-xdist>=3.8",
+    "ruff>=0.16.10",
+]
 
 [tool.taskipy.tasks]
 service = { cmd = "uvicorn man.app:app --reload --host 127.0.0.1 --port 8000", help = "run service" }
 db_migrate = { cmd = "alembic upgrade head", help = "run alembic upgrade" }
 lint = { cmd = "ruff format --check . && ruff check .", help = "run ruff linter" }
 lint_fix = { cmd = "ruff format . && ruff check --fix .", help = "run ruff linter with autofix" }
-type_check = { cmd = "pyright man", help = "run pyright type checker" }
+type_check = { cmd = "pyright man tests", help = "type check the app and tests" }
+test = { cmd = "MAN_ENV=test python -m pytest --cov=man --cov-report=term-missing", help = "run all tests with coverage" }
+test_fast = { cmd = "MAN_ENV=test python -m pytest -n auto --no-cov", help = "run tests in parallel without coverage" }
+test_unit = { cmd = "MAN_ENV=test python -m pytest -m 'not integration' --no-cov", help = "run tests without PostgreSQL" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
+markers = ["integration: requires the disposable PostgreSQL test service"]
+
+[tool.coverage.run]
+source = ["man"]
+concurrency = ["thread", "greenlet"]
+
+[tool.coverage.report]
+include_namespace_packages = true
+exclude_also = ["if TYPE_CHECKING:"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+include = ["man", "tests"]
+
+[tool.ruff]
+target-version = "py314"
 
 [tool.ruff.lint]
+extend-select = ["I"]
 ignore = ["B008"]
