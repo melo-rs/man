@@ -10,6 +10,7 @@ wheels/
 .venv
 
 # environment variable files
+temp_auto_push.bat
 .env
 .env.*
 !.env.template
@@ -22,3 +23,5 @@ htmlcov/
 test-results.xml
 .pytest_cache/
 .ruff_cache/
+.gitignore
+branch_structure.json
