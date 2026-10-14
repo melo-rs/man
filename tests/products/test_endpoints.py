@@ -1,20 +1,51 @@
+from collections.abc import AsyncIterator
 from typing import Annotated, Any
 from uuid import UUID, uuid7
 
 import pytest
 from fastapi import Depends, FastAPI
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from starlette.types import Receive, Scope, Send
 
+from man.app import create_app
 from man.exceptions import ManError
 from man.models import Product
 from man.postgres import get_db_session
 from man.products.repository import ProductRepository
 from tests.fixtures.database import SaveFixture
-from tests.fixtures.random_objects import create_product
+from tests.fixtures.random_models import create_product
 
 pytestmark = [pytest.mark.anyio, pytest.mark.integration]
 PAYLOAD = {"name": "Product", "description": "Description", "price": 1000}
+
+
+@pytest.fixture
+def request_session_app() -> FastAPI:
+    return create_app()
+
+
+@pytest.fixture
+async def request_session_client(
+    request_session_app: FastAPI, session: AsyncSession
+) -> AsyncIterator[AsyncClient]:
+    """Exercise production session handling inside the test's outer transaction."""
+    sessionmaker = async_sessionmaker(
+        bind=session.bind,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    async def app_with_state(scope: Scope, receive: Receive, send: Send) -> None:
+        await session.commit()
+        session.expunge_all()
+        scope.setdefault("state", {}).update(async_sessionmaker=sessionmaker)
+        await request_session_app(scope, receive, send)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_state), base_url="http://test"
+    ) as client:
+        yield client
 
 
 async def test_create_then_retrieve_in_another_request(client: AsyncClient) -> None:
@@ -126,32 +157,34 @@ async def test_pagination_queries(
 
 
 async def test_each_request_uses_a_fresh_session(
-    app: FastAPI, client: AsyncClient, session: AsyncSession
+    request_session_app: FastAPI,
+    request_session_client: AsyncClient,
+    session: AsyncSession,
 ) -> None:
     request_sessions: list[AsyncSession] = []
 
-    @app.get("/test/session")
+    @request_session_app.get("/test/session")
     async def capture_session(
         db: Annotated[AsyncSession, Depends(get_db_session)],
     ) -> None:
         request_sessions.append(db)
 
-    assert (await client.get("/test/session")).status_code == 200
-    assert (await client.get("/test/session")).status_code == 200
+    assert (await request_session_client.get("/test/session")).status_code == 200
+    assert (await request_session_client.get("/test/session")).status_code == 200
     assert len(request_sessions) == 2
     assert request_sessions[0] is not request_sessions[1]
     assert all(db is not session for db in request_sessions)
 
 
 async def test_failed_request_rolls_back_and_next_request_succeeds(
-    app: FastAPI,
-    client: AsyncClient,
+    request_session_app: FastAPI,
+    request_session_client: AsyncClient,
     session: AsyncSession,
     product: Product,
 ) -> None:
     failed_id = uuid7()
 
-    @app.post("/test/rollback")
+    @request_session_app.post("/test/rollback")
     async def failing_endpoint(
         db: Annotated[AsyncSession, Depends(get_db_session)],
     ) -> None:
@@ -159,8 +192,12 @@ async def test_failed_request_rolls_back_and_next_request_succeeds(
         await db.flush()
         raise ManError("Rollback this request", status_code=400)
 
-    response = await client.post("/test/rollback")
+    response = await request_session_client.post("/test/rollback")
     assert response.status_code == 400
     assert await ProductRepository(session).get_by_id(failed_id) is None
-    assert (await client.get(f"/v1/products/{product.id}")).status_code == 200
-    assert (await client.post("/v1/products", json=PAYLOAD)).status_code == 200
+    assert (
+        await request_session_client.get(f"/v1/products/{product.id}")
+    ).status_code == 200
+    assert (
+        await request_session_client.post("/v1/products", json=PAYLOAD)
+    ).status_code == 200

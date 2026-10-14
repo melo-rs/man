@@ -1,140 +1,108 @@
-import asyncio
-import re
+import os
+import pathlib
+import time
 from collections.abc import AsyncIterator, Callable, Coroutine, Iterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from pathlib import Path
 
-import asyncpg
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, async_sessionmaker
+from pydantic import PostgresDsn
+from pytest_mock import MockerFixture
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy_utils import create_database, database_exists, drop_database
 
 from man.config import settings
-from man.kit.db.postgres import AsyncSessionMaker, create_async_engine
+from man.kit.db.postgres import create_async_engine
 from man.models import Model
 
-ROOT = Path(__file__).resolve().parents[2]
-ALEMBIC_CONFIG_FILE = ROOT / "alembic.ini"
 
-
-@dataclass(frozen=True)
-class Database:
-    name: str
-    url: str
-
-
-def get_database_name(base_name: str, testrun_uid: str, worker_id: str) -> str:
-    """Only generate disposable names; never reuse or drop an existing database."""
-    if not re.fullmatch(r"[a-z][a-z0-9_]*_test", base_name):
-        raise ValueError("The test database base name must end in '_test'")
-    if not re.fullmatch(r"[0-9a-f]{32}", testrun_uid):
-        raise ValueError("The test run ID must contain 32 lowercase hexadecimal digits")
-    if not re.fullmatch(r"master|gw[0-9]+", worker_id):
-        raise ValueError("Invalid pytest worker ID")
-    name = f"{base_name}_{testrun_uid}_{worker_id}"
-    if len(name) > 63:
-        raise ValueError("The generated test database name exceeds PostgreSQL's limit")
-    return name
-
-
-async def _execute_admin_statement(statement: str) -> None:
-    connection = await asyncpg.connect(
-        host=settings.POSTGRES_HOST,
-        port=settings.POSTGRES_PORT,
-        user=settings.POSTGRES_USER,
-        password=settings.POSTGRES_PWD,
-        database="postgres",
-        timeout=10,
+def get_database_url(worker_id: str, driver: str = "asyncpg") -> str:
+    return str(
+        PostgresDsn.build(
+            scheme=f"postgresql+{driver}",
+            username=settings.POSTGRES_USER,
+            password=settings.POSTGRES_PWD,
+            host=settings.POSTGRES_HOST,
+            port=settings.POSTGRES_PORT,
+            path=f"{settings.POSTGRES_DATABASE}_{worker_id}",
+        )
     )
-    try:
-        await connection.execute(statement)
-    finally:
-        await connection.close()
 
 
-def apply_migrations(database_url: str) -> None:
-    config = Config(ALEMBIC_CONFIG_FILE)
-    config.attributes["sqlalchemy.url"] = database_url
-    command.upgrade(config, "head")
+TEMPLATE_DATABASE = os.environ.get("MAN_TEST_DATABASE_TEMPLATE")
+
+ALEMBIC_CONFIG_FILE = pathlib.Path(__file__).parent.parent.parent / "alembic.ini"
 
 
-@pytest.fixture(scope="session")
-def initialize_test_database(worker_id: str, testrun_uid: str) -> Iterator[Database]:
-    if not settings.is_test():
-        raise pytest.UsageError("Database tests require MAN_ENV=test")
-
-    name = get_database_name(settings.POSTGRES_DATABASE, testrun_uid, worker_id)
-    test_settings = settings.model_copy(update={"POSTGRES_DATABASE": name})
-    database = Database(name=name, url=test_settings.get_postgres_dsn("asyncpg"))
-
-    # Identifiers are validated above. A failed CREATE must not trigger a DROP.
-    try:
-        asyncio.run(_execute_admin_statement(f'CREATE DATABASE "{name}"'))
-    except OSError as exc:
-        raise RuntimeError(
-            "Cannot connect to test PostgreSQL. Start it with "
-            "'docker compose -f docker-compose.test.yml up -d --wait'."
-        ) from exc
-    try:
-        apply_migrations(database.url)
-        yield database
-    finally:
-        asyncio.run(_execute_admin_statement(f'DROP DATABASE "{name}"'))
+def apply_migrations(asyncpg_database_url: str) -> None:
+    alembic_cfg = Config(ALEMBIC_CONFIG_FILE)
+    alembic_cfg.attributes["sqlalchemy.url"] = asyncpg_database_url
+    command.upgrade(alembic_cfg, "head")
 
 
-@asynccontextmanager
-async def database_transaction(database: Database) -> AsyncIterator[AsyncConnection]:
-    """All session commits stay inside an outer transaction that always rolls back."""
+def clone_template_database(sync_database_url: str) -> None:
+    for _ in range(150):
+        try:
+            create_database(sync_database_url, template=TEMPLATE_DATABASE)
+            return
+        except SQLAlchemyError as e:
+            if "being accessed by other users" not in str(e):
+                raise
+            time.sleep(0.2)
+    raise RuntimeError(f"Template database {TEMPLATE_DATABASE} never became free")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_test_database(worker_id: str) -> Iterator[None]:
+    sync_database_url = get_database_url(worker_id, "psycopg2")
+
+    if database_exists(sync_database_url):
+        drop_database(sync_database_url)
+
+    if TEMPLATE_DATABASE:
+        clone_template_database(sync_database_url)
+    else:
+        create_database(sync_database_url)
+        apply_migrations(get_database_url(worker_id))
+
+    yield
+
+    drop_database(sync_database_url)
+
+
+@pytest.fixture
+async def session(worker_id: str, mocker: MockerFixture) -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(
-        dsn=database.url,
-        application_name=f"test.{database.name}",
-        pool_size=1,
+        dsn=get_database_url(worker_id),
+        application_name=f"test_{worker_id}",
+        pool_size=settings.DATABASE_POOL_SIZE,
         pool_recycle=settings.DATABASE_POOL_RECYCLE_SECONDS,
-        command_timeout=settings.DATABASE_COMMAND_TIMEOUT_SECONDS,
-    )
-    try:
-        async with engine.connect() as connection:
-            transaction = await connection.begin()
-            try:
-                yield connection
-            finally:
-                await transaction.rollback()
-    finally:
-        await engine.dispose()
-
-
-@pytest.fixture
-async def connection(
-    initialize_test_database: Database, anyio_backend: str
-) -> AsyncIterator[AsyncConnection]:
-    async with database_transaction(initialize_test_database) as connection:
-        yield connection
-
-
-@pytest.fixture
-def sessionmaker(connection: AsyncConnection) -> AsyncSessionMaker:
-    return async_sessionmaker(
-        bind=connection,
-        expire_on_commit=False,
-        join_transaction_mode="create_savepoint",
     )
 
+    connection = await engine.connect()
+    transaction = await connection.begin()
 
-@pytest.fixture
-async def session(sessionmaker: AsyncSessionMaker) -> AsyncIterator[AsyncSession]:
-    async with sessionmaker() as session:
-        yield session
+    session = AsyncSession(bind=connection, expire_on_commit=False)
+
+    yield session
+
+    await transaction.rollback()
+    await connection.close()
+    await engine.dispose()
 
 
-type SaveFixture = Callable[[Model], Coroutine[None, None, None]]
+SaveFixture = Callable[[Model], Coroutine[None, None, None]]
+
+
+def save_fixture_factory(session: AsyncSession) -> SaveFixture:
+    async def _save_fixture(model: Model) -> None:
+        session.add(model)
+        await session.flush()
+
+    return _save_fixture
 
 
 @pytest.fixture
 def save_fixture(session: AsyncSession) -> SaveFixture:
-    async def save(model: Model) -> None:
-        session.add(model)
-        await session.flush()
-
-    return save
+    return save_fixture_factory(session)

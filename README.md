@@ -4,23 +4,26 @@ Python 3.14, FastAPI, SQLAlchemy, PostgreSQL, and Alembic.
 
 ## Run the tests
 
-Install the locked development dependencies and start the disposable test service:
+For first-time setup, copy `.env.template` to `.env` and customize it as needed.
+Install the locked development dependencies and start the shared PostgreSQL service:
 
 ```sh
 uv sync --dev --locked
-docker compose -f docker-compose.test.yml up -d --wait
+docker compose up -d --wait postgres
 uv run task test
 ```
 
-The test service uses PostgreSQL 18.6 on `127.0.0.1:5433`. It has a separate
-Compose project and stores its data in memory. Public connection defaults live
-in the tracked `.env.test`; tests select `MAN_ENV=test` before importing the app.
-Environment variables override those defaults, including the port used by CI.
+Development and tests use the same PostgreSQL 18.6 server on port `5432`.
+Development uses the `man` database; tests create separate worker databases
+such as `man_test_master` and `man_test_gw0`. Public test defaults live in the
+tracked `.env.test`; tests select `MAN_ENV=test` before importing the app.
+Environment variables override those defaults. If the server uses custom
+credentials, host, or port, use matching values when running tests.
 
 Useful commands:
 
 ```sh
-# No PostgreSQL required
+# Run unit tests (the database fixture still initializes a worker database)
 uv run task test_unit
 
 # Parallel execution without coverage
@@ -36,65 +39,72 @@ uv run task test tests/products/test_endpoints.py::test_missing_product
 # Match CI's reports
 uv run task test --cov-report=xml --cov-report=html --junitxml=test-results.xml
 
-# Stop the service and discard all its data
-docker compose -f docker-compose.test.yml down
+# Stop the shared service; its persistent volume retains development data
+docker compose down
 ```
 
-For a different local port, set `MAN_TEST_POSTGRES_PORT` when starting Compose
-and the same value in `MAN_POSTGRES_PORT` when running tests. An alternative
-PostgreSQL server must give the test user permission to create databases and
-use a `MAN_POSTGRES_DATABASE` base name ending in `_test`.
+The PostgreSQL user must have permission to create and drop databases. The
+Compose service's default `man` user has these permissions. Keep a separate test
+database prefix in `MAN_POSTGRES_DATABASE`, such as `man_test`.
 
 ## Test conventions
 
 Tests mirror application domains. Each domain uses `test_schemas.py`,
 `test_repository.py`, and `test_endpoints.py` as needed. Mark database-backed
 tests with `pytest.mark.integration` and async tests with `pytest.mark.anyio`.
-AnyIO uses asyncio, matching asyncpg.
+AnyIO uses asyncio, matching asyncpg. Database initialization is session-scoped
+and automatic for every test run, including runs that select only unit tests.
 
 Shared fixtures live in `tests/fixtures`:
 
-- `database`: one freshly migrated database per run and xdist worker, plus
-  function-scoped connections, sessions, and `save_fixture`.
-- `base`: fresh FastAPI apps and HTTPX clients using the real session middleware
-  and database dependency.
-- `random_objects`: typed async builders such as `create_product`, with explicit
+- `database`: one freshly migrated database per xdist worker, plus
+  function-scoped transactions, sessions, and `save_fixture`.
+- `base`: FastAPI dependency overrides and HTTPX clients that clear the test
+  session's identity map before each request.
+- `random_models`: typed async builders such as `create_product`, with explicit
   overrides and predictable defaults; names follow Polar's fixture conventions.
 
 Repository tests use the real PostgreSQL database. `save_fixture` adds and
-flushes models. Endpoint tests automatically release fixture setup savepoints
-before each request, clear the setup session's identity map, and open a fresh
-request session on the same connection. Application commits and rollbacks use
-savepoints inside an outer transaction that always rolls back after the test.
-Requests within one test run sequentially; this shared-connection client is not
-a harness for concurrent-request or separate-connection visibility tests.
+flushes models. Endpoint tests reuse the test session through a dependency
+override. The HTTPX client expunges loaded objects before each request to catch
+behavior that would otherwise depend on the session's identity map. Each test
+starts an outer database transaction and rolls it back afterward.
+The request-session lifecycle tests use a dedicated client with the real database
+dependency and request savepoints to verify production commits and rollbacks.
 
-Test databases include the run ID and worker ID and are dropped on normal
-teardown. The harness never drops the configured base database or reuses an
-existing generated database. If a run is forcibly terminated, stopping the
-disposable Compose service clears any leftover databases.
+Worker databases use the configured test prefix and worker ID: `master` for a
+serial run and `gw0`, `gw1`, etc. for parallel runs. The initialization fixture
+drops an existing worker database, recreates it, and applies migrations before
+the suite. It drops the worker database again on normal teardown. Overlapping
+test runs need different `MAN_POSTGRES_DATABASE` values because worker names are
+reused. The configured base database and development database are left intact.
 
 Routine HTTPX tests inject request state rather than starting application
-lifespan. The health tests also use a context-managed `TestClient` to exercise
-real startup, database connections, and shutdown. Schema and helper tests do
-not initialize PostgreSQL.
+lifespan.
 
 ## Migrations and checks
 
 Schemas are built from migrations, never `metadata.create_all()`. The model
-registry must import new models so Alembic can discover them. Check the base
-test database explicitly with:
+registry must import new models so Alembic can discover them. Migrate and check
+the development database with:
 
 ```sh
-MAN_ENV=test uv run task db_migrate
-MAN_ENV=test uv run alembic check
+uv run task db_migrate
+uv run alembic check
 uv run task lint
 uv run task type_check
 ```
 
-CI runs those checks and the serial suite, uploading JUnit and XML/HTML coverage
-reports. Coverage is reported without a minimum threshold. Optional xdist
-parallelism is available locally; database templates, CI sharding, and services
-such as Redis and MinIO are deferred until the application needs them.
+CI starts a PostgreSQL service with a `man_test` database, migrates it, and runs
+`alembic check`. It sets `MAN_TEST_DATABASE_TEMPLATE=man_test`, so worker
+databases are cloned from that migrated template instead of applying migrations
+again. Locally, the fixture applies migrations unless
+`MAN_TEST_DATABASE_TEMPLATE` names an existing migrated template. Template
+cloning retries briefly when another connection is using the template, matching
+Polar's fixture.
 
-This suite follows [Polar's backend test conventions at commit 2a1cb969](https://github.com/polarsource/polar/tree/2a1cb969fb21e2c9811c094069351089736fb172/server/tests).
+CI uploads JUnit and XML/HTML coverage reports. Coverage is reported without a
+minimum threshold. Optional xdist parallelism is available locally.
+
+The database lifecycle and shared PostgreSQL setup follow
+[Polar's backend fixtures at commit a4bae2b7](https://github.com/polarsource/polar/tree/a4bae2b742befdb6dcc696a841f259aed24f2086/server/tests/fixtures).

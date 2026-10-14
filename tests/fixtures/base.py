@@ -1,45 +1,60 @@
-from collections.abc import AsyncIterator
-from typing import Literal
+from collections.abc import AsyncGenerator
+from typing import Any, Literal
 
 import httpx
 import pytest
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
-from man.app import create_app
-from man.kit.db.postgres import AsyncSessionMaker
+from man.app import app as man_app
+from man.postgres import AsyncSession, get_db_session
 
 
-@pytest.fixture(scope="session")
+class HTTPClient(httpx.AsyncClient):
+    """
+    Test client that mimics production behavior by clearing session before requests.
+
+    Each HTTP request gets a fresh database session. This client
+    simulates that by expunging all objects from the test session before each
+    request, catching lazy='raise' errors that would otherwise pass in tests.
+    """
+
+    def __init__(self, session: AsyncSession, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._session = session
+
+    async def request(self, *args: Any, **kwargs: Any) -> httpx.Response:
+        """Expunge session before each request to simulate production."""
+        self._session.expunge_all()
+        return await super().request(*args, **kwargs)
+
+
+@pytest.fixture
+async def app(session: AsyncSession) -> AsyncGenerator[FastAPI]:
+    man_app.dependency_overrides[get_db_session] = lambda: session
+    yield man_app
+    man_app.dependency_overrides.pop(get_db_session)
+
+
+@pytest.fixture(scope="session", autouse=True)
 def anyio_backend() -> Literal["asyncio"]:
     return "asyncio"
 
 
 @pytest.fixture
-def app() -> FastAPI:
-    return create_app()
-
-
-@pytest.fixture
 async def client(
     app: FastAPI,
-    connection: AsyncConnection,
     session: AsyncSession,
-    sessionmaker: AsyncSessionMaker,
-) -> AsyncIterator[httpx.AsyncClient]:
+) -> AsyncGenerator[HTTPClient]:
+    sessionmaker = async_sessionmaker(bind=session.bind, expire_on_commit=False)
+
     async def app_with_state(scope: Scope, receive: Receive, send: Send) -> None:
-        # Finish fixture setup before opening another savepoint on this connection.
-        # Clearing the identity map also prevents assertions from reading stale objects.
-        await session.commit()
-        session.expunge_all()
-        scope.setdefault("state", {}).update(
-            async_engine=connection.engine,
-            async_sessionmaker=sessionmaker,
-        )
+        scope.setdefault("state", {}).update(async_sessionmaker=sessionmaker)
         await app(scope, receive, send)
 
-    async with httpx.AsyncClient(
+    async with HTTPClient(
+        session=session,
         transport=httpx.ASGITransport(app=app_with_state),
         base_url="http://test",
     ) as client:

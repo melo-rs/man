@@ -6,5 +6,5 @@ os.environ["MAN_ENV"] = "test"
 pytest_plugins = (
     "tests.fixtures.base",
     "tests.fixtures.database",
-    "tests.fixtures.random_objects",
+    "tests.fixtures.random_models",
 )
