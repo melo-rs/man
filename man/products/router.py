@@ -5,10 +5,9 @@ from pydantic import UUID7
 
 from man.exceptions import ResourceMissing
 from man.kit.pagination import ListResource, PaginationParamsQuery
-from man.models.product import Product
 from man.postgres import AsyncSession, get_db_session
-from man.products.repository import ProductRepository
 from man.products.schemas import ProductCreate, ProductSchema
+from man.products.service import products as product_service
 
 router = APIRouter()
 
@@ -23,12 +22,7 @@ async def list_products(
     pagination_params: PaginationParamsQuery,
     session: AsyncSession = Depends(get_db_session),
 ) -> ListResource[ProductSchema]:
-    product_repository = ProductRepository.from_session(session)
-
-    statement = product_repository.get_base_statement()
-    products, total_count = await product_repository.paginate(
-        statement, pagination_params
-    )
+    products, total_count = await product_service.list(session, pagination_params)
 
     return ListResource[ProductSchema].from_paginated_results(
         [ProductSchema.model_validate(product) for product in products], total_count
@@ -39,8 +33,7 @@ async def list_products(
 async def retrieve_product(
     id: UUID7, session: AsyncSession = Depends(get_db_session)
 ) -> ProductSchema:
-    product_repository = ProductRepository.from_session(session)
-    product = await product_repository.get_by_id(id)
+    product = await product_service.get(session, id)
 
     if not product:
         raise ProductMissing(id)
@@ -52,13 +45,5 @@ async def retrieve_product(
 async def create_product(
     create_schema: ProductCreate, session: AsyncSession = Depends(get_db_session)
 ) -> ProductSchema:
-    product = Product(
-        name=create_schema.name,
-        description=create_schema.description,
-        price=create_schema.price,
-    )
-
-    session.add(product)
-    await session.flush()
-
+    product = await product_service.create(session, create_schema)
     return ProductSchema.model_validate(product)
