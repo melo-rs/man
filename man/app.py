@@ -3,6 +3,8 @@ from collections.abc import AsyncGenerator
 from typing import TypedDict
 
 from fastapi import FastAPI
+from starlette.types import Scope
+
 from man.config import settings
 from man.exception_handlers import add_exception_handlers
 from man.health.router import router as health_router
@@ -14,7 +16,6 @@ from man.kit.db.postgres import (
 )
 from man.postgres import AsyncSessionMiddleware, create_async_engine
 from man.router import router
-from starlette.types import Scope
 
 
 def configure_cors(app: FastAPI):
@@ -60,23 +61,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[State]:
 
     async_sessionmaker = create_async_sessionmaker(async_engine)
 
-    yield {
-        "async_engine": async_engine,
-        "async_sessionmaker": async_sessionmaker,
-    }
+    try:
+        yield {
+            "async_engine": async_engine,
+            "async_sessionmaker": async_sessionmaker,
+        }
+    finally:
+        await async_engine.dispose()
 
-    await async_engine.dispose()
+
+def create_app() -> FastAPI:
+    app = FastAPI(lifespan=lifespan)
+    app.add_middleware(AsyncSessionMiddleware)
+
+    configure_cors(app)
+    add_exception_handlers(app)
+
+    app.include_router(health_router)
+    app.include_router(router)
+
+    return app
 
 
-app = FastAPI(lifespan=lifespan)
-
-app.add_middleware(AsyncSessionMiddleware)
-
-configure_cors(app)
-add_exception_handlers(app)
-
-# /healthz
-app.include_router(health_router)
-
-# /v1
-app.include_router(router)
+app = create_app()
