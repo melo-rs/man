@@ -7,12 +7,14 @@ class ProductSchema(IDSchema, TimestampedSchema):
     name: str
     description: str
     price: int
+    thumb_url: str
 
 
 class ProductCreate(Schema):
     name: str
     description: str
     price: int
+    thumb_url: str
 
     @field_validator("name", "description")
     def str_fields_cannot_be_empty(cls, value: str) -> str:

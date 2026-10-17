@@ -17,7 +17,12 @@ from tests.fixtures.database import SaveFixture
 from tests.fixtures.random_models import create_product
 
 pytestmark = [pytest.mark.anyio, pytest.mark.integration]
-PAYLOAD = {"name": "Product", "description": "Description", "price": 1000}
+PAYLOAD = {
+    "name": "Product",
+    "description": "Description",
+    "price": 1000,
+    "thumb_url": "https://example.com/product.png",
+}
 
 
 @pytest.fixture
@@ -71,6 +76,7 @@ async def test_retrieve_fixture_product(client: AsyncClient, product: Product) -
     assert response.status_code == 200
     assert response.json()["name"] == product.name
     assert response.json()["price"] == product.price
+    assert response.json()["thumb_url"] == product.thumb_url
 
 
 async def test_empty_list(client: AsyncClient) -> None:
@@ -104,6 +110,7 @@ async def test_invalid_product_id(client: AsyncClient, id: str) -> None:
         {**PAYLOAD, "description": ""},
         {**PAYLOAD, "price": 0},
         {**PAYLOAD, "price": -1},
+        {key: value for key, value in PAYLOAD.items() if key != "thumb_url"},
     ],
 )
 async def test_invalid_creation(client: AsyncClient, payload: dict[str, Any]) -> None:

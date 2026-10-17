@@ -22,13 +22,13 @@ class OfferService:
         offer_repository = OfferRepository.from_session(session)
         return await offer_repository.get_by_id(id)
 
-    async def create(
-        self, session: AsyncSession, create_schema: OfferCreate
-    ) -> Offer:
+    async def create(self, session: AsyncSession, create_schema: OfferCreate) -> Offer:
         # Verifica se o produto existe antes de criar a oferta
         product = await session.get(Product, create_schema.product_id)
         if not product:
-            raise ResourceMissing(f"The product {create_schema.product_id} could not be found")
+            raise ResourceMissing(
+                f"The product {create_schema.product_id} could not be found"
+            )
 
         offer_repository = OfferRepository.from_session(session)
         offer = Offer(
