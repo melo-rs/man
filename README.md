@@ -4,7 +4,8 @@ Python 3.14, FastAPI, SQLAlchemy, PostgreSQL, and Alembic.
 
 ## Run the tests
 
-For first-time setup, copy `.env.template` to `.env` and customize it as needed.
+For first-time setup, copy `.env.template` to `.env`, set `MAN_PASSWORD`, and
+customize the other values as needed.
 Install the locked development dependencies and start the shared PostgreSQL service:
 
 ```sh
@@ -23,7 +24,7 @@ credentials, host, or port, use matching values when running tests.
 Useful commands:
 
 ```sh
-# Run unit tests (the database fixture still initializes a worker database)
+# Run unit tests without starting a database
 uv run task test_unit
 
 # Parallel execution without coverage
@@ -53,7 +54,7 @@ Tests mirror application domains. Each domain uses `test_schemas.py`,
 `test_repository.py`, and `test_endpoints.py` as needed. Mark database-backed
 tests with `pytest.mark.integration` and async tests with `pytest.mark.anyio`.
 AnyIO uses asyncio, matching asyncpg. Database initialization is session-scoped
-and automatic for every test run, including runs that select only unit tests.
+and runs for tests that request a database fixture.
 
 Shared fixtures live in `tests/fixtures`:
 
@@ -81,6 +82,22 @@ reused. The configured base database and development database are left intact.
 
 Routine HTTPX tests inject request state rather than starting application
 lifespan.
+
+## Authentication
+
+Set `MAN_PASSWORD` in the environment or `.env` before starting the app. There
+is one shared password and no registration endpoint. `POST /v1/login` accepts
+`{"password": "..."}` and sets an HTTP-only session cookie. The session is stored
+in PostgreSQL and expires 30 days after login; requests do not extend it.
+
+```sh
+curl -c cookies.txt -H 'Content-Type: application/json' \
+  -d '{"password":"YOUR_PASSWORD"}' http://127.0.0.1:8000/v1/login
+curl -b cookies.txt http://127.0.0.1:8000/v1/products
+```
+
+`/v1/products`, `/v1/offers`, and `/v1/files` require the cookie. The health
+endpoint remains public. Apply the database migration before using login.
 
 ## Migrations and checks
 

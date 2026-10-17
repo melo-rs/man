@@ -2,7 +2,7 @@ import os
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import PostgresDsn
+from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     DATABASE_POOL_RECYCLE_SECONDS: int = 600  # 10 minutes
     DATABASE_COMMAND_TIMEOUT_SECONDS: float = 30.0
     DATABASE_STREAM_YIELD_PER: int = 100
+
+    # Authentication
+    PASSWORD: SecretStr = SecretStr("")
 
     # CORS
     CORS_ORIGINS: list[str] = []

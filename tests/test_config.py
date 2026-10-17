@@ -1,8 +1,11 @@
 from typing import Literal
 
 import pytest
+from pydantic import SecretStr
+from pytest import MonkeyPatch
 from sqlalchemy.engine import make_url
 
+from man.app import app, lifespan
 from man.config import Environment, Settings, settings
 
 
@@ -30,3 +33,13 @@ def test_database_urls_preserve_special_password_characters(
     assert url.drivername == f"postgresql+{driver}"
     assert url.password == "p@ss%word"
     assert url.database == "man_test"
+
+
+@pytest.mark.anyio
+async def test_app_requires_a_configured_login_password(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "PASSWORD", SecretStr(""))
+    with pytest.raises(RuntimeError, match="MAN_PASSWORD must be configured"):
+        async with lifespan(app):
+            pass

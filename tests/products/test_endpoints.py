@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
 from man.app import create_app
+from man.config import settings
 from man.exceptions import ManError
 from man.models import Product
 from man.postgres import get_db_session
@@ -50,6 +51,10 @@ async def request_session_client(
     async with AsyncClient(
         transport=ASGITransport(app=app_with_state), base_url="http://test"
     ) as client:
+        response = await client.post(
+            "/v1/login", json={"password": settings.PASSWORD.get_secret_value()}
+        )
+        assert response.status_code == 204
         yield client
 
 

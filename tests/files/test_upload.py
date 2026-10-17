@@ -12,6 +12,7 @@ import pytest
 from fastapi import FastAPI
 from pytest import MonkeyPatch
 
+from man.auth.dependencies import require_authentication
 from man.config import settings
 from man.files.service import files
 from man.integrations.vercel.blob import service as blob_module
@@ -99,6 +100,11 @@ async def test_files_endpoint_returns_a_presigned_url(monkeypatch: MonkeyPatch) 
     monkeypatch.setattr(files, "create", create)
     test_app = FastAPI()
     test_app.include_router(router)
+
+    async def allow_request() -> None:
+        pass
+
+    test_app.dependency_overrides[require_authentication] = allow_request
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=test_app), base_url="http://test"
