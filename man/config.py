@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = []
 
+    # Vercel Blob
+    VERCEL_BLOB_READ_WRITE_TOKEN: str = ""
+
     # Pagination
     API_PAGINATION_MAX_LIMIT: int = 100
 
