@@ -122,5 +122,16 @@ async def test_files_endpoint_returns_a_presigned_url(monkeypatch: MonkeyPatch) 
 
 def test_blob_client_requires_configuration(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "VERCEL_BLOB_READ_WRITE_TOKEN", "")
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
     with pytest.raises(ValueError, match="not configured or invalid"):
         BlobClient()
+
+
+def test_blob_client_uses_connected_vercel_store(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "VERCEL_BLOB_READ_WRITE_TOKEN", "")
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_store_secret")
+
+    client = BlobClient()
+
+    assert client.headers["Authorization"] == "Bearer vercel_blob_rw_store_secret"
+    assert client.headers["x-vercel-blob-store-id"] == "store"

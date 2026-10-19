@@ -2,6 +2,59 @@
 
 Python 3.14, FastAPI, SQLAlchemy, PostgreSQL, and Alembic.
 
+## Deploy to Vercel
+
+Vercel uses `man.app:app` as one Python Function. From this directory, link a
+Vercel project (or create one at the prompt):
+
+```sh
+vercel link
+```
+
+To add a new PostgreSQL database, run `vercel integration add neon` and select
+the linked project and Production environment at the prompts. You can also
+create or connect Neon in the project's **Storage** tab. The integration adds a
+pooled `DATABASE_URL` to the selected environments; the app uses it directly.
+If `DATABASE_URL_UNPOOLED` is available, Alembic uses that direct connection.
+The existing `MAN_POSTGRES_*` settings remain a fallback when `DATABASE_URL`
+is absent. For Preview deployments, connect a separate Neon branch so preview
+requests do not write to the production database.
+
+Connect a Vercel Blob store to that same project in its **Storage** tab. Enable
+the Production environment when connecting it. Vercel then supplies
+`BLOB_READ_WRITE_TOKEN` automatically. The backend also accepts the existing
+`MAN_VERCEL_BLOB_READ_WRITE_TOKEN` setting for local use. The upload endpoint
+returns a short-lived signed URL so the file goes directly to Blob.
+If you need a new store, `vercel blob create-store man-files` creates one and
+prompts you to connect it to the linked project.
+
+Set these Production variables in the project settings or with `vercel env add
+NAME production` (which prompts for the value):
+
+```text
+MAN_ENV=production
+MAN_PASSWORD=<strong password>
+MAN_CORS_ORIGINS=["https://your-frontend.example"]  # if a browser frontend uses the API
+```
+
+Check that `vercel env ls production` includes `DATABASE_URL` from Neon and
+`BLOB_READ_WRITE_TOKEN` from Blob. If using another PostgreSQL provider, set
+`MAN_POSTGRES_HOST`, `MAN_POSTGRES_PORT`, `MAN_POSTGRES_DATABASE`,
+`MAN_POSTGRES_USER`, and `MAN_POSTGRES_PWD` instead; its host must be reachable
+from Vercel. Apply migrations from this checkout, then deploy and check the
+health endpoint:
+
+```sh
+vercel env run -e production -- uv run alembic upgrade head
+vercel deploy --prod
+curl https://<deployment-url>/healthz
+```
+
+The deployment URL is printed by the CLI. `/healthz` also checks the database.
+For a preview deployment, configure the same required variables and Blob store
+for Preview and run `vercel deploy` without `--prod`. The `.vercelignore` file
+keeps local `.env` files and test artifacts out of CLI uploads.
+
 ## Run the tests
 
 For first-time setup, copy `.env.template` to `.env`, set `MAN_PASSWORD`, and

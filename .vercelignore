@@ -1,0 +1,10 @@
+.env*
+.venv/
+tests/
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.coverage*
+coverage.xml
+test-results.xml
+erl_crash.dump

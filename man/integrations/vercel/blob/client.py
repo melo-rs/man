@@ -1,3 +1,5 @@
+import os
+
 import httpx
 
 from man.config import settings
@@ -9,7 +11,12 @@ class BlobClient(httpx.AsyncClient):
         token: str | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
     ):
-        token = token if token is not None else settings.VERCEL_BLOB_READ_WRITE_TOKEN
+        token = (
+            token
+            if token is not None
+            else settings.VERCEL_BLOB_READ_WRITE_TOKEN
+            or os.getenv("BLOB_READ_WRITE_TOKEN", "")
+        )
         parts = token.split("_", 4)
         if (
             len(parts) != 5

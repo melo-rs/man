@@ -35,6 +35,49 @@ def test_database_urls_preserve_special_password_characters(
     assert url.database == "man_test"
 
 
+def test_neon_database_urls_use_pooled_runtime_and_direct_migrations() -> None:
+    config = settings.model_copy(
+        update={
+            "ENV": Environment.production,
+            "DATABASE_URL": "postgresql://user:p%40ss@pooled.example/db?sslmode=require&channel_binding=require",
+            "DATABASE_URL_UNPOOLED": "postgresql://user:p%40ss@direct.example/db?sslmode=require&channel_binding=require",
+        }
+    )
+
+    runtime_url = make_url(config.get_postgres_dsn("asyncpg"))
+    migration_url = make_url(config.get_postgres_dsn("asyncpg", direct=True))
+
+    assert runtime_url.host == "pooled.example"
+    assert migration_url.host == "direct.example"
+    assert runtime_url.password == "p@ss"
+    assert runtime_url.query == {"ssl": "require"}
+    assert migration_url.query == {"ssl": "require"}
+
+
+def test_neon_url_keeps_libpq_options_for_psycopg2() -> None:
+    config = settings.model_copy(
+        update={
+            "ENV": Environment.production,
+            "DATABASE_URL": "postgres://user:password@pooled.example/db?sslmode=require&channel_binding=require",
+        }
+    )
+
+    url = make_url(config.get_postgres_dsn("psycopg2"))
+
+    assert url.drivername == "postgresql+psycopg2"
+    assert url.query == {"sslmode": "require", "channel_binding": "require"}
+
+
+def test_neon_integration_url_is_read_from_environment(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:password@host.example/db")
+
+    config = Settings()
+
+    assert config.DATABASE_URL == "postgresql://user:password@host.example/db"
+
+
 @pytest.mark.anyio
 async def test_app_requires_a_configured_login_password(
     monkeypatch: MonkeyPatch,
