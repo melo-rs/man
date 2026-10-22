@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
 from man.app import app as man_app
+from man.config import settings
 from man.postgres import AsyncSession, get_db_session
 
 
@@ -32,7 +33,10 @@ class HTTPClient(httpx.AsyncClient):
 
 @pytest.fixture
 async def app(session: AsyncSession) -> AsyncGenerator[FastAPI]:
-    man_app.dependency_overrides[get_db_session] = lambda: session
+    async def get_test_session() -> AsyncSession:
+        return session
+
+    man_app.dependency_overrides[get_db_session] = get_test_session
     yield man_app
     man_app.dependency_overrides.pop(get_db_session)
 
@@ -58,4 +62,8 @@ async def client(
         transport=httpx.ASGITransport(app=app_with_state),
         base_url="http://test",
     ) as client:
+        response = await client.post(
+            "/v1/login", json={"password": settings.PASSWORD.get_secret_value()}
+        )
+        assert response.status_code == 204
         yield client

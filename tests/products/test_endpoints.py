@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
 from man.app import create_app
+from man.config import settings
 from man.exceptions import ManError
 from man.models import Product
 from man.postgres import get_db_session
@@ -17,7 +18,12 @@ from tests.fixtures.database import SaveFixture
 from tests.fixtures.random_models import create_product
 
 pytestmark = [pytest.mark.anyio, pytest.mark.integration]
-PAYLOAD = {"name": "Product", "description": "Description", "price": 1000}
+PAYLOAD = {
+    "name": "Product",
+    "description": "Description",
+    "price": 1000,
+    "thumb_url": "https://example.com/product.png",
+}
 
 
 @pytest.fixture
@@ -45,6 +51,10 @@ async def request_session_client(
     async with AsyncClient(
         transport=ASGITransport(app=app_with_state), base_url="http://test"
     ) as client:
+        response = await client.post(
+            "/v1/login", json={"password": settings.PASSWORD.get_secret_value()}
+        )
+        assert response.status_code == 204
         yield client
 
 
@@ -71,6 +81,7 @@ async def test_retrieve_fixture_product(client: AsyncClient, product: Product) -
     assert response.status_code == 200
     assert response.json()["name"] == product.name
     assert response.json()["price"] == product.price
+    assert response.json()["thumb_url"] == product.thumb_url
 
 
 async def test_empty_list(client: AsyncClient) -> None:
@@ -104,6 +115,7 @@ async def test_invalid_product_id(client: AsyncClient, id: str) -> None:
         {**PAYLOAD, "description": ""},
         {**PAYLOAD, "price": 0},
         {**PAYLOAD, "price": -1},
+        {key: value for key, value in PAYLOAD.items() if key != "thumb_url"},
     ],
 )
 async def test_invalid_creation(client: AsyncClient, payload: dict[str, Any]) -> None:

@@ -6,7 +6,9 @@ from sqlalchemy import (
     INT,
     TIMESTAMP,
     CheckConstraint,
-    ForeignKey,  
+    ForeignKey,
+)
+from sqlalchemy import (
     UUID as SQLUUID,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -37,7 +39,7 @@ class Offer(RecordModel):
 
     promo_price: Mapped[int] = mapped_column(
         INT,
-        nullable=False,  
+        nullable=False,
     )
 
     starts_at: Mapped[datetime] = mapped_column(

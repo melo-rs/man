@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from pydantic import UUID7, field_validator, model_validator
 
 from man.kit.schemas import IDSchema, Schema, TimestampedSchema
@@ -25,7 +26,7 @@ class OfferCreate(Schema):
         return value
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "OfferCreate":
+    def validate_dates(self) -> OfferCreate:
         if self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be after starts_at")
         return self

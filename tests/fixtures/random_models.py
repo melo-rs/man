@@ -12,6 +12,7 @@ async def create_product(
     name: str = "Product",
     description: str = "Description",
     price: int = 1000,
+    thumb_url: str = "https://example.com/product.png",
     id: UUID | None = None,
 ) -> Product:
     product = Product(
@@ -19,6 +20,7 @@ async def create_product(
         name=name,
         description=description,
         price=price,
+        thumb_url=thumb_url,
     )
     await save_fixture(product)
     return product

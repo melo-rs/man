@@ -57,6 +57,9 @@ class State(TypedDict):
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[State]:
+    if not settings.PASSWORD.get_secret_value():
+        raise RuntimeError("MAN_PASSWORD must be configured")
+
     async_engine = create_async_engine()
 
     async_sessionmaker = create_async_sessionmaker(async_engine)

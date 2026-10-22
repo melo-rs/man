@@ -5,10 +5,9 @@ from pydantic import UUID7
 
 from man.exceptions import ResourceMissing
 from man.kit.pagination import ListResource, PaginationParamsQuery
-from man.postgres import AsyncSession, get_db_session
 from man.offers.schemas import OfferCreate, OfferSchema
 from man.offers.service import offers as offer_service
-from man.auth.dependencies import require_authentication
+from man.postgres import AsyncSession, get_db_session
 
 router = APIRouter()
 

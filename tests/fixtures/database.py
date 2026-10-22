@@ -53,7 +53,7 @@ def clone_template_database(sync_database_url: str) -> None:
     raise RuntimeError(f"Template database {TEMPLATE_DATABASE} never became free")
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def initialize_test_database(worker_id: str) -> Iterator[None]:
     sync_database_url = get_database_url(worker_id, "psycopg2")
 
@@ -72,7 +72,9 @@ def initialize_test_database(worker_id: str) -> Iterator[None]:
 
 
 @pytest.fixture
-async def session(worker_id: str, mocker: MockerFixture) -> AsyncIterator[AsyncSession]:
+async def session(
+    worker_id: str, mocker: MockerFixture, initialize_test_database: None
+) -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(
         dsn=get_database_url(worker_id),
         application_name=f"test_{worker_id}",
