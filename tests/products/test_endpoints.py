@@ -201,3 +201,28 @@ async def test_failed_request_rolls_back_and_next_request_succeeds(
     assert (
         await request_session_client.post("/v1/products", json=PAYLOAD)
     ).status_code == 200
+
+
+    async def test_product_list_is_public(client: AsyncClient) -> None:
+        client.cookies.clear()
+
+        response = await client.get(
+            "/v1/products",
+            params={"first": 1},
+        )
+
+        assert response.status_code == 200
+
+
+    async def test_create_product_requires_authentication(
+        client: AsyncClient,
+    ) -> None:
+        client.cookies.clear()
+
+        response = await client.post(
+            "/v1/products",
+            json=PAYLOAD,
+        )
+
+        assert response.status_code == 401
+

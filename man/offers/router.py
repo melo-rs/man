@@ -8,6 +8,7 @@ from man.kit.pagination import ListResource, PaginationParamsQuery
 from man.postgres import AsyncSession, get_db_session
 from man.offers.schemas import OfferCreate, OfferSchema
 from man.offers.service import offers as offer_service
+from man.auth.dependencies import require_authentication
 
 router = APIRouter()
 
@@ -38,7 +39,10 @@ async def retrieve_offer(
     return OfferSchema.model_validate(offer)
 
 
-@router.post("/offers")
+@router.post(
+    "/offers",
+    dependencies=[Depends(require_authentication)],
+)
 async def create_offer(
     create_schema: OfferCreate, session: AsyncSession = Depends(get_db_session)
 ) -> OfferSchema:

@@ -8,6 +8,7 @@ from man.kit.pagination import ListResource, PaginationParamsQuery
 from man.postgres import AsyncSession, get_db_session
 from man.products.schemas import ProductCreate, ProductSchema
 from man.products.service import products as product_service
+from man.auth.dependencies import require_authentication
 
 router = APIRouter()
 
@@ -41,7 +42,10 @@ async def retrieve_product(
     return ProductSchema.model_validate(product)
 
 
-@router.post("/products")
+@router.post(
+    "/products",
+    dependencies=[Depends(require_authentication)],
+)
 async def create_product(
     create_schema: ProductCreate, session: AsyncSession = Depends(get_db_session)
 ) -> ProductSchema:
