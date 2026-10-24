@@ -24,3 +24,5 @@ test-results.xml
 .pytest_cache/
 .ruff_cache/
 .DS_Store
+.vercel
+.env*
