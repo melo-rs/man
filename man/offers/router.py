@@ -6,7 +6,7 @@ from pydantic import UUID7
 from man.auth.dependencies import require_authentication
 from man.exceptions import ResourceMissing
 from man.kit.pagination import ListResource, PaginationParamsQuery
-from man.offers.schemas import OfferCreate, OfferSchema
+from man.offers.schemas import OfferCreate, OfferSchema, OfferUpdate
 from man.offers.service import offers as offer_service
 from man.postgres import AsyncSession, get_db_session
 
@@ -45,3 +45,25 @@ async def create_offer(
 ) -> OfferSchema:
     offer = await offer_service.create(session, create_schema)
     return OfferSchema.model_validate(offer)
+
+
+@router.put("/offers/{id}", dependencies=[Depends(require_authentication)])
+async def update_offer(
+    id: UUID7,
+    update_schema: OfferUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> OfferSchema:
+    offer = await offer_service.update(session, id, update_schema)
+    if not offer:
+        raise OfferMissing(id)
+    return OfferSchema.model_validate(offer)
+
+
+@router.delete(
+    "/offers/{id}", dependencies=[Depends(require_authentication)], status_code=204
+)
+async def delete_offer(
+    id: UUID7, session: AsyncSession = Depends(get_db_session)
+) -> None:
+    if not await offer_service.delete(session, id):
+        raise OfferMissing(id)

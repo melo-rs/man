@@ -18,3 +18,6 @@ class Product(RecordModel):
     unit: Mapped[str] = mapped_column(VARCHAR(100), nullable=False, default="unidade")
     gallery_urls: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     options: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    option_prices: Mapped[dict[str, int]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
