@@ -31,3 +31,7 @@ class OfferCreate(Schema):
         if self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be after starts_at")
         return self
+
+
+class OfferUpdate(OfferCreate):
+    is_active: bool

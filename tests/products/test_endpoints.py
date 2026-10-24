@@ -96,6 +96,67 @@ async def test_storefront_fields_are_returned(client: AsyncClient) -> None:
     assert all(response.json()[key] == value for key, value in payload.items())
 
 
+async def test_option_prices_and_product_edit_keep_product_response_shape(
+    client: AsyncClient,
+) -> None:
+    payload = {
+        **PAYLOAD,
+        "options": ["Unidade", "Caixa"],
+        "option_prices": {"Caixa": 2000},
+    }
+    created = await client.post("/v1/products", json=payload)
+    assert created.status_code == 200
+    product = created.json()
+    assert set(product) == {
+        "id",
+        "created_at",
+        "modified_at",
+        "name",
+        "description",
+        "price",
+        "thumb_url",
+        "category",
+        "unit",
+        "gallery_urls",
+        "options",
+    }
+    product_id = product["id"]
+    prices = await client.get("/v1/product-option-prices")
+    assert prices.status_code == 200
+    assert prices.json()[product_id] == {"Caixa": 2000}
+
+    updated = await client.put(
+        f"/v1/products/{product_id}",
+        json={**payload, "name": "Novo nome", "option_prices": {"Unidade": 800}},
+    )
+    assert updated.status_code == 200
+    assert set(updated.json()) == set(product)
+    assert updated.json()["name"] == "Novo nome"
+    assert updated.json()["modified_at"] is not None
+    assert (await client.get("/v1/product-option-prices")).json()[product_id] == {
+        "Unidade": 800
+    }
+
+    deleted = await client.delete(f"/v1/products/{product_id}")
+    assert deleted.status_code == 204
+    assert (await client.get(f"/v1/products/{product_id}")).status_code == 404
+    assert product_id not in (await client.get("/v1/product-option-prices")).json()
+
+
+@pytest.mark.parametrize(
+    "option_prices",
+    [{"Desconhecida": 100}, {"Caixa": 0}, {"Caixa": -1}],
+)
+async def test_invalid_option_prices(
+    client: AsyncClient, option_prices: dict[str, int]
+) -> None:
+    response = await client.post(
+        "/v1/products",
+        json={**PAYLOAD, "options": ["Caixa"], "option_prices": option_prices},
+    )
+    assert response.status_code == 422
+
+
 async def test_retrieve_fixture_product(client: AsyncClient, product: Product) -> None:
     response = await client.get(f"/v1/products/{product.id}")
     assert response.status_code == 200

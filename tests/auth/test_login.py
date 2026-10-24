@@ -102,7 +102,8 @@ async def test_catalog_reads_are_public(client: AsyncClient, path: str) -> None:
     client.cookies.clear()
     response = await client.get(path, headers={"Origin": "http://127.0.0.1:5500"})
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "*"
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5500"
+    assert response.headers["access-control-allow-credentials"] == "true"
 
 
 async def test_forged_session_cookie_is_rejected(client: AsyncClient) -> None:

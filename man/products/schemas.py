@@ -1,6 +1,6 @@
 from urllib.parse import urlsplit
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from man.kit.schemas import IDSchema, Schema, TimestampedSchema
 
@@ -25,6 +25,7 @@ class ProductCreate(Schema):
     unit: str = "unidade"
     gallery_urls: list[str] = Field(default_factory=list)
     options: list[str] = Field(default_factory=list)
+    option_prices: dict[str, int] = Field(default_factory=dict)
 
     @field_validator("name", "description", "category", "unit")
     def str_fields_cannot_be_empty(cls, value: str) -> str:
@@ -54,3 +55,16 @@ class ProductCreate(Schema):
             if parsed.scheme != "https" or not parsed.netloc:
                 raise ValueError("gallery image URLs must be absolute HTTPS URLs")
         return values
+
+    @model_validator(mode="after")
+    def validate_option_prices(self) -> ProductCreate:
+        if any(not option for option in self.options):
+            raise ValueError("option names must not be empty")
+        if len(set(self.options)) != len(self.options):
+            raise ValueError("option names must be unique")
+        for name, price in self.option_prices.items():
+            if name not in self.options:
+                raise ValueError("option price name must match an option")
+            if price <= 0:
+                raise ValueError("option prices must be positive")
+        return self

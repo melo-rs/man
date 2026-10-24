@@ -40,7 +40,7 @@ def configure_cors(app: FastAPI):
     service_config = CORSConfig(
         lambda origin, scope: True,
         allow_origins=["*"],
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["Authorization"],
     )

@@ -30,6 +30,13 @@ async def list_products(
     )
 
 
+@router.get("/product-option-prices")
+async def list_product_option_prices(
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, dict[str, int]]:
+    return await product_service.list_option_prices(session)
+
+
 @router.get("/products/{id}")
 async def retrieve_product(
     id: UUID7, session: AsyncSession = Depends(get_db_session)
@@ -48,3 +55,25 @@ async def create_product(
 ) -> ProductSchema:
     product = await product_service.create(session, create_schema)
     return ProductSchema.model_validate(product)
+
+
+@router.put("/products/{id}", dependencies=[Depends(require_authentication)])
+async def update_product(
+    id: UUID7,
+    update_schema: ProductCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> ProductSchema:
+    product = await product_service.update(session, id, update_schema)
+    if not product:
+        raise ProductMissing(id)
+    return ProductSchema.model_validate(product)
+
+
+@router.delete(
+    "/products/{id}", dependencies=[Depends(require_authentication)], status_code=204
+)
+async def delete_product(
+    id: UUID7, session: AsyncSession = Depends(get_db_session)
+) -> None:
+    if not await product_service.delete(session, id):
+        raise ProductMissing(id)

@@ -35,8 +35,12 @@ NAME production` (which prompts for the value):
 ```text
 MAN_ENV=production
 MAN_PASSWORD=<strong password>
-MAN_CORS_ORIGINS=["https://your-frontend.example"]  # if a browser frontend uses the API
+MAN_CORS_ORIGINS=["https://your-frontend.example"]  # optional: allow all request headers from this origin
 ```
+
+CORS allows credentialed requests from any origin and reflects that origin in
+the response. Origins listed in `MAN_CORS_ORIGINS` may also send any request
+header; other origins may send `Authorization` and standard CORS headers.
 
 Check that `vercel env ls production` includes `DATABASE_URL` from Neon and
 `BLOB_READ_WRITE_TOKEN` from Blob. If using another PostgreSQL provider, set
@@ -156,6 +160,15 @@ the cookie. Prices are integer BRL centavos. Product records also include
 `category`, `unit`, `gallery_urls`, and `options` for the storefront. Apply the
 database migration before using these fields. Product image fields use absolute
 HTTPS URLs, and offer responses include the associated product's `thumb_url`.
+
+Authenticated `PUT` and `DELETE` endpoints at `/v1/products/{id}` and
+`/v1/offers/{id}` support full edits and deletion in the administration panel.
+Updating an offer also accepts `is_active`. Deleting a product cascades to its
+offers. Product create and update requests may include `option_prices`, a map
+from option name to price in BRL cents. The separate public
+`GET /v1/product-option-prices` route returns these maps keyed by product ID.
+Existing product and offer response JSON fields remain unchanged. Apply the
+`0005` migration before using the new product field.
 
 To import the storefront's initial 13 products and seven offers, run:
 

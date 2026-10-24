@@ -7,7 +7,7 @@ from man.exceptions import ResourceMissing
 from man.kit.pagination import PaginationParams
 from man.models import Offer, Product
 from man.offers.repository import OfferRepository
-from man.offers.schemas import OfferCreate
+from man.offers.schemas import OfferCreate, OfferUpdate
 
 
 class OfferService:
@@ -39,6 +39,36 @@ class OfferService:
             is_active=True,
         )
         return await offer_repository.create(offer, flush=True)
+
+    async def update(
+        self, session: AsyncSession, id: UUID, update_schema: OfferUpdate
+    ) -> Offer | None:
+        repository = OfferRepository.from_session(session)
+        offer = await repository.get_by_id(id)
+        if offer is None:
+            return None
+        product = await session.get(Product, update_schema.product_id)
+        if product is None:
+            raise ResourceMissing(
+                f"The product {update_schema.product_id} could not be found"
+            )
+        offer.set_modified_at()
+        return await repository.update(
+            offer,
+            update_dict={
+                **update_schema.model_dump(exclude={"product_id"}),
+                "product": product,
+            },
+            flush=True,
+        )
+
+    async def delete(self, session: AsyncSession, id: UUID) -> bool:
+        offer = await OfferRepository.from_session(session).get_by_id(id)
+        if offer is None:
+            return False
+        await session.delete(offer)
+        await session.flush()
+        return True
 
 
 offers = OfferService()
