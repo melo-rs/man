@@ -11,9 +11,10 @@ from sqlalchemy import (
 from sqlalchemy import (
     UUID as SQLUUID,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from man.kit.db.models import RecordModel
+from man.models.product import Product
 
 
 class Offer(RecordModel):
@@ -36,6 +37,11 @@ class Offer(RecordModel):
         nullable=False,
         index=True,
     )
+    product: Mapped[Product] = relationship(lazy="raise")
+
+    @property
+    def thumb_url(self) -> str:
+        return self.product.thumb_url
 
     promo_price: Mapped[int] = mapped_column(
         INT,

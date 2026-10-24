@@ -66,12 +66,30 @@ async def test_login_allows_credentialed_configured_frontend(
 @pytest.mark.parametrize(
     ("method", "path", "payload"),
     [
-        ("GET", "/v1/products", None),
-        ("GET", "/v1/offers", None),
+        (
+            "POST",
+            "/v1/products",
+            {
+                "name": "Item",
+                "description": "Desc",
+                "price": 100,
+                "thumb_url": "item.jpg",
+            },
+        ),
+        (
+            "POST",
+            "/v1/offers",
+            {
+                "product_id": str(uuid7()),
+                "promo_price": 50,
+                "starts_at": "2026-10-24T00:00:00Z",
+                "ends_at": "2026-10-31T00:00:00Z",
+            },
+        ),
         ("POST", "/v1/files", {"mime_type": "image/png"}),
     ],
 )
-async def test_resource_endpoints_require_login(
+async def test_write_endpoints_require_login(
     client: AsyncClient, method: str, path: str, payload: dict[str, str] | None
 ) -> None:
     client.cookies.clear()
@@ -79,9 +97,25 @@ async def test_resource_endpoints_require_login(
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize("path", ["/v1/products?first=1", "/v1/offers?first=1"])
+async def test_catalog_reads_are_public(client: AsyncClient, path: str) -> None:
+    client.cookies.clear()
+    response = await client.get(path, headers={"Origin": "http://127.0.0.1:5500"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
 async def test_forged_session_cookie_is_rejected(client: AsyncClient) -> None:
     client.cookies.set(SESSION_COOKIE, "made-up-token", path="/v1")
-    response = await client.get("/v1/products")
+    response = await client.post(
+        "/v1/products",
+        json={
+            "name": "Item",
+            "description": "Desc",
+            "price": 100,
+            "thumb_url": "item.jpg",
+        },
+    )
     assert response.status_code == 401
 
 
@@ -114,5 +148,13 @@ async def test_expired_session_is_rejected(
     auth_session.expires_at = utc_now() - timedelta(seconds=1)
     await session.flush()
 
-    response = await client.get("/v1/products")
+    response = await client.post(
+        "/v1/products",
+        json={
+            "name": "Item",
+            "description": "Desc",
+            "price": 100,
+            "thumb_url": "item.jpg",
+        },
+    )
     assert response.status_code == 401

@@ -9,6 +9,6 @@ from man.products.router import router as products_router
 router = APIRouter(prefix="/v1")
 
 router.include_router(auth_router)
-router.include_router(products_router, dependencies=[Depends(require_authentication)])
-router.include_router(offers_router, dependencies=[Depends(require_authentication)])
+router.include_router(products_router)
+router.include_router(offers_router)
 router.include_router(files_router, dependencies=[Depends(require_authentication)])

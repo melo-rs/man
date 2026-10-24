@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import UUID7
 
+from man.auth.dependencies import require_authentication
 from man.exceptions import ResourceMissing
 from man.kit.pagination import ListResource, PaginationParamsQuery
 from man.offers.schemas import OfferCreate, OfferSchema
@@ -38,10 +39,7 @@ async def retrieve_offer(
     return OfferSchema.model_validate(offer)
 
 
-@router.post(
-    "/offers",
-    dependencies=[Depends(require_authentication)],
-)
+@router.post("/offers", dependencies=[Depends(require_authentication)])
 async def create_offer(
     create_schema: OfferCreate, session: AsyncSession = Depends(get_db_session)
 ) -> OfferSchema:

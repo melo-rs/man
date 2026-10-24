@@ -1,4 +1,6 @@
-from pydantic import field_validator
+from urllib.parse import urlsplit
+
+from pydantic import Field, field_validator
 
 from man.kit.schemas import IDSchema, Schema, TimestampedSchema
 
@@ -6,17 +8,25 @@ from man.kit.schemas import IDSchema, Schema, TimestampedSchema
 class ProductSchema(IDSchema, TimestampedSchema):
     name: str
     description: str
-    price: int
+    price: int = Field(description="Price in BRL cents.")
     thumb_url: str
+    category: str
+    unit: str
+    gallery_urls: list[str]
+    options: list[str]
 
 
 class ProductCreate(Schema):
     name: str
     description: str
-    price: int
+    price: int = Field(description="Price in BRL cents.")
     thumb_url: str
+    category: str = "Produtos"
+    unit: str = "unidade"
+    gallery_urls: list[str] = Field(default_factory=list)
+    options: list[str] = Field(default_factory=list)
 
-    @field_validator("name", "description")
+    @field_validator("name", "description", "category", "unit")
     def str_fields_cannot_be_empty(cls, value: str) -> str:
         if not value:
             raise ValueError("must not be empty")
@@ -29,3 +39,18 @@ class ProductCreate(Schema):
             raise ValueError("must be positive")
 
         return value
+
+    @field_validator("thumb_url")
+    def thumb_must_be_public_url(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise ValueError("image URL must be an absolute HTTPS URL")
+        return value
+
+    @field_validator("gallery_urls")
+    def gallery_must_have_public_urls(cls, values: list[str]) -> list[str]:
+        for value in values:
+            parsed = urlsplit(value)
+            if parsed.scheme != "https" or not parsed.netloc:
+                raise ValueError("gallery image URLs must be absolute HTTPS URLs")
+        return values

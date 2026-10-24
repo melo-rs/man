@@ -24,7 +24,8 @@ Connect a Vercel Blob store to that same project in its **Storage** tab. Enable
 the Production environment when connecting it. Vercel then supplies
 `BLOB_READ_WRITE_TOKEN` automatically. The backend also accepts the existing
 `MAN_VERCEL_BLOB_READ_WRITE_TOKEN` setting for local use. The upload endpoint
-returns a short-lived signed URL so the file goes directly to Blob.
+returns a short-lived signed URL so the file goes directly to Blob. It accepts
+PNG, JPEG, WebP, and AVIF images.
 If you need a new store, `vercel blob create-store man-files` creates one and
 prompts you to connect it to the linked project.
 
@@ -149,8 +150,28 @@ curl -c cookies.txt -H 'Content-Type: application/json' \
 curl -b cookies.txt http://127.0.0.1:8000/v1/products
 ```
 
-`/v1/products`, `/v1/offers`, and `/v1/files` require the cookie. The health
-endpoint remains public. Apply the database migration before using login.
+Product and offer GET endpoints are public so the storefront can load its
+catalogue. Creating products or offers, and using `/v1/files`, still requires
+the cookie. Prices are integer BRL centavos. Product records also include
+`category`, `unit`, `gallery_urls`, and `options` for the storefront. Apply the
+database migration before using these fields. Product image fields use absolute
+HTTPS URLs, and offer responses include the associated product's `thumb_url`.
+
+To import the storefront's initial 13 products and seven offers, run:
+
+```sh
+uv run alembic upgrade head
+PYTHONPATH=. uv run python scripts/migrate_storefront_images.py
+PYTHONPATH=. uv run python scripts/seed_storefront.py
+```
+
+The seed script leaves existing products and active offers alone. New offers
+start when the script runs and expire seven days later. The image migration
+requires the sibling `Emporio_GE` checkout, Vercel CLI, and a public Blob store
+read-write token. It writes URLs to the local, ignored
+`scripts/data/blob_urls.json`, so each environment can use its own store. The
+script reuses existing blobs and leaves product records with custom images
+untouched.
 
 ## Migrations and checks
 

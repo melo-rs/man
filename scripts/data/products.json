@@ -1,0 +1,221 @@
+[
+  {
+    "source_page": "page products/Acafrao.html",
+    "name": "Açafrão",
+    "category": "Temperos",
+    "description": "Uma das especiarias mais nobres do mundo. Traz um aroma único, sabor sutil e uma cor dourada espetacular para risotos e pratos especiais.",
+    "price_reais": "3.00",
+    "original_price_reais": null,
+    "unit": "pacote",
+    "gallery": [
+      "images/acafrao.avif"
+    ],
+    "options": [
+      "Pacote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/Atum.html",
+    "name": "Atum",
+    "category": "Pescado Fresco",
+    "description": "Se você procura uma experiência gastronômica de alto nível, o nosso Atum Fresco é a escolha perfeita. Com sua carne vermelha intensa, textura firme e sabor incrivelmente amanteigado, ele entrega a suculência de um corte nobre com a leveza do oceano.",
+    "price_reais": "19.80",
+    "original_price_reais": "22.00",
+    "unit": "kg",
+    "gallery": [
+      "images/atum.jpg",
+      "images/atum1.jpg",
+      "images/atum2.jpg"
+    ],
+    "options": [
+      "Inteiro",
+      "Limpo",
+      "Em filé"
+    ]
+  },
+  {
+    "source_page": "page products/Colorau.html",
+    "name": "Colorau",
+    "category": "Temperos",
+    "description": "Também conhecido como urucum, é um corante e tempero natural. Essencial para dar aquela cor dourada e sabor marcante ao arroz, feijão e ensopados.",
+    "price_reais": "2.00",
+    "original_price_reais": null,
+    "unit": "pacote",
+    "gallery": [
+      "images/Colorau.jpg"
+    ],
+    "options": [
+      "Pacote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/Corvina.html",
+    "name": "Corvina",
+    "category": "Pescado Fresco",
+    "description": "Peixe de água salgada, carne branca, textura firme e sabor suave. Ideal para grelhar, assar ou fritar. Entregue fresco, do mar direto para a sua mesa.",
+    "price_reais": "17.10",
+    "original_price_reais": "19.00",
+    "unit": "kg",
+    "gallery": [
+      "images/Corvina.webp",
+      "images/corvina1.jpg",
+      "images/corvina2.jpg"
+    ],
+    "options": [
+      "Inteiro",
+      "Limpo",
+      "Em filé"
+    ]
+  },
+  {
+    "source_page": "page products/Filé-Tilápia.html",
+    "name": "Filé Tilápia",
+    "category": "Pescado Fresco",
+    "description": "Corte nobre da tilápia, sem espinhas e com carne branca super macia. Prático e versátil, é a escolha perfeita para receitas rápidas do dia a dia, grelhados leves ou empanados.",
+    "price_reais": "18.00",
+    "original_price_reais": "20.00",
+    "unit": "kg",
+    "gallery": [
+      "images/fileti.webp",
+      "images/fileti1.jpg",
+      "images/fileti2.jpg"
+    ],
+    "options": [
+      "Em filé"
+    ]
+  },
+  {
+    "source_page": "page products/Lemon.html",
+    "name": "Lemon Pepper",
+    "category": "Temperos",
+    "description": "A combinação perfeita entre a acidez do limão e o toque apimentado da pimenta-do-reino. Ideal para finalizar peixes grelhados e frangos.",
+    "price_reais": "4.00",
+    "original_price_reais": null,
+    "unit": "pote",
+    "gallery": [
+      "images/Lemon-Peper.avif"
+    ],
+    "options": [
+      "Pote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/Paprica.html",
+    "name": "Páprica",
+    "category": "Temperos",
+    "description": "Tempero vibrante e levemente picante, extraído de pimentões secos. Dá cor e sabor inconfundíveis a carnes, peixes e aves.",
+    "price_reais": "3.00",
+    "original_price_reais": null,
+    "unit": "pacote",
+    "gallery": [
+      "images/Páprica.jpg"
+    ],
+    "options": [
+      "Pacote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/Pasta.html",
+    "name": "Pasta de Brilho",
+    "category": "Temperos",
+    "description": "Um segredo de chefs para finalização. Essa pasta realça a cor e dá um brilho apetitoso a assados e grelhados, sem alterar o sabor original do alimento.",
+    "price_reais": "8.00",
+    "original_price_reais": null,
+    "unit": "pote",
+    "gallery": [
+      "images/Pasta-brilho.jpeg"
+    ],
+    "options": [
+      "Pote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/Sardinha.html",
+    "name": "Sardinha",
+    "category": "Pescado Fresco",
+    "description": "Pequeno peixe de água salgada, muito saboroso e rico em nutrientes. Famoso por ser uma excelente fonte de ômega-3. Ideal para fritar inteira, assar ou preparar na brasa.",
+    "price_reais": "8.00",
+    "original_price_reais": "10.00",
+    "unit": "800g",
+    "gallery": [
+      "images/Sardinha.jpg",
+      "images/sardinha1.jpg",
+      "images/sardinha2.jpg"
+    ],
+    "options": [
+      "Inteiro",
+      "Limpo",
+      "Em filé"
+    ]
+  },
+  {
+    "source_page": "page products/camarao.html",
+    "name": "Camarão",
+    "category": "Frutos do Mar",
+    "description": "Camarão fresco, selecionado e de excelente qualidade. Perfeito para receitas grelhadas, refogados, risotos ou para a famosa sequência de camarão.",
+    "price_reais": "28.80",
+    "original_price_reais": "32.00",
+    "unit": "kg",
+    "gallery": [
+      "images/Camarao.jpg",
+      "images/camarao1.jpg",
+      "images/camarao2.jpg"
+    ],
+    "options": [
+      "Inteiro (com casca)",
+      "Limpo (sem casca)"
+    ]
+  },
+  {
+    "source_page": "page products/chimichurri.html",
+    "name": "Chimichurri",
+    "category": "Temperos",
+    "description": "Tempero clássico à base de ervas, alho e azeite. Perfeito para dar aquele toque especial em carnes grelhadas e, claro, no seu peixe fresco.",
+    "price_reais": "3.00",
+    "original_price_reais": null,
+    "unit": "pacote",
+    "gallery": [
+      "images/Chimichurri.jpg"
+    ],
+    "options": [
+      "Pacote Fechado"
+    ]
+  },
+  {
+    "source_page": "page products/ovos.html",
+    "name": "Ovos",
+    "category": "Mercearia",
+    "description": "Ovos frescos, selecionados e de procedência garantida. Ideais para o consumo diário, preparo de receitas ou para acompanhar o seu pescado.",
+    "price_reais": "18.00",
+    "original_price_reais": "20.00",
+    "unit": "dúzia",
+    "gallery": [
+      "images/Eggs.jpg",
+      "images/eggs1.jpg",
+      "images/eggs2.jpg"
+    ],
+    "options": [
+      "Branco",
+      "Vermelho"
+    ]
+  },
+  {
+    "source_page": "page products/tilapia.html",
+    "name": "Tilápia",
+    "category": "Pescado Fresco",
+    "description": "Peixe de água doce muito versátil, com carne branca, macia e de sabor suave. Uma excelente opção saudável e acessível. Perfeita para assar no forno, grelhar ou preparar em postas.",
+    "price_reais": "12.75",
+    "original_price_reais": "15.00",
+    "unit": "kg",
+    "gallery": [
+      "images/tilapia.jpg",
+      "images/tilapia1.jpeg",
+      "images/tilapia2.avif"
+    ],
+    "options": [
+      "Inteiro",
+      "Limpo",
+      "Em filé"
+    ]
+  }
+]

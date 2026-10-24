@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Tilápia",
+    "promo_price_reais": "12.75",
+    "source_page": "page products/tilapia.html"
+  },
+  {
+    "name": "Sardinha",
+    "promo_price_reais": "8.00",
+    "source_page": "page products/Sardinha.html"
+  },
+  {
+    "name": "Filé Tilápia",
+    "promo_price_reais": "18.00",
+    "source_page": "page products/Filé-Tilápia.html"
+  },
+  {
+    "name": "Atum",
+    "promo_price_reais": "19.80",
+    "source_page": "page products/Atum.html"
+  },
+  {
+    "name": "Corvina",
+    "promo_price_reais": "17.10",
+    "source_page": "page products/Corvina.html"
+  },
+  {
+    "name": "Camarão",
+    "promo_price_reais": "28.80",
+    "source_page": "page products/camarao.html"
+  },
+  {
+    "name": "Ovos",
+    "promo_price_reais": "18.00",
+    "source_page": "page products/ovos.html"
+  }
+]

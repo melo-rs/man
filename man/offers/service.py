@@ -32,7 +32,7 @@ class OfferService:
 
         offer_repository = OfferRepository.from_session(session)
         offer = Offer(
-            product_id=create_schema.product_id,
+            product=product,
             promo_price=create_schema.promo_price,
             starts_at=create_schema.starts_at,
             ends_at=create_schema.ends_at,

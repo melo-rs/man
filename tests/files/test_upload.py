@@ -94,7 +94,12 @@ async def test_blob_api_error_is_not_returned_as_an_upload_url(
         await blob_module.BlobService().issue_signed_token("image-id", "image/png")
 
 
-async def test_files_endpoint_returns_a_presigned_url(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    "mime_type", ["image/png", "image/jpeg", "image/webp", "image/avif"]
+)
+async def test_files_endpoint_returns_a_presigned_url(
+    monkeypatch: MonkeyPatch, mime_type: str
+) -> None:
     file_id = uuid7()
     create = AsyncMock(return_value=(file_id, "https://vercel.com/api/blob/?signed=1"))
     monkeypatch.setattr(files, "create", create)
@@ -109,12 +114,12 @@ async def test_files_endpoint_returns_a_presigned_url(monkeypatch: MonkeyPatch) 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=test_app), base_url="http://test"
     ) as client:
-        response = await client.post("/v1/files", json={"mime_type": "image/png"})
+        response = await client.post("/v1/files", json={"mime_type": mime_type})
 
     assert response.status_code == 200
     assert response.json() == {
         "id": str(file_id),
-        "mime_type": "image/png",
+        "mime_type": mime_type,
         "upload_url": "https://vercel.com/api/blob/?signed=1",
     }
     create.assert_awaited_once()

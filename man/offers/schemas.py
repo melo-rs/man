@@ -1,13 +1,14 @@
 from datetime import datetime
 
-from pydantic import UUID7, field_validator, model_validator
+from pydantic import UUID7, Field, field_validator, model_validator
 
 from man.kit.schemas import IDSchema, Schema, TimestampedSchema
 
 
 class OfferSchema(IDSchema, TimestampedSchema):
     product_id: UUID7
-    promo_price: int
+    thumb_url: str = Field(description="Public URL of the product image.")
+    promo_price: int = Field(description="Promotional price in BRL cents.")
     starts_at: datetime
     ends_at: datetime
     is_active: bool
@@ -15,7 +16,7 @@ class OfferSchema(IDSchema, TimestampedSchema):
 
 class OfferCreate(Schema):
     product_id: UUID7
-    promo_price: int
+    promo_price: int = Field(description="Promotional price in BRL cents.")
     starts_at: datetime
     ends_at: datetime
 

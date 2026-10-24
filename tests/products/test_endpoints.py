@@ -66,6 +66,10 @@ async def test_create_then_retrieve_in_another_request(client: AsyncClient) -> N
     assert product["created_at"]
     assert product["modified_at"] is None
     assert {field: product[field] for field in PAYLOAD} == PAYLOAD
+    assert product["category"] == "Produtos"
+    assert product["unit"] == "unidade"
+    assert product["gallery_urls"] == []
+    assert product["options"] == []
 
     retrieved = await client.get(f"/v1/products/{product['id']}")
     assert retrieved.status_code == 200
@@ -74,6 +78,22 @@ async def test_create_then_retrieve_in_another_request(client: AsyncClient) -> N
     listed = await client.get("/v1/products", params={"first": 1})
     assert listed.status_code == 200
     assert listed.json() == {"items": [product], "pagination": {"total_count": 1}}
+
+
+async def test_storefront_fields_are_returned(client: AsyncClient) -> None:
+    payload = {
+        **PAYLOAD,
+        "category": "Pescado Fresco",
+        "unit": "kg",
+        "gallery_urls": [
+            "https://example.com/fish.jpg",
+            "https://example.com/fish-side.jpg",
+        ],
+        "options": ["Inteiro", "Limpo"],
+    }
+    response = await client.post("/v1/products", json=payload)
+    assert response.status_code == 200
+    assert all(response.json()[key] == value for key, value in payload.items())
 
 
 async def test_retrieve_fixture_product(client: AsyncClient, product: Product) -> None:
@@ -115,6 +135,8 @@ async def test_invalid_product_id(client: AsyncClient, id: str) -> None:
         {**PAYLOAD, "description": ""},
         {**PAYLOAD, "price": 0},
         {**PAYLOAD, "price": -1},
+        {**PAYLOAD, "thumb_url": "images/item.jpg"},
+        {**PAYLOAD, "gallery_urls": ["images/item.jpg"]},
         {key: value for key, value in PAYLOAD.items() if key != "thumb_url"},
     ],
 )
@@ -213,28 +235,3 @@ async def test_failed_request_rolls_back_and_next_request_succeeds(
     assert (
         await request_session_client.post("/v1/products", json=PAYLOAD)
     ).status_code == 200
-
-
-    async def test_product_list_is_public(client: AsyncClient) -> None:
-        client.cookies.clear()
-
-        response = await client.get(
-            "/v1/products",
-            params={"first": 1},
-        )
-
-        assert response.status_code == 200
-
-
-    async def test_create_product_requires_authentication(
-        client: AsyncClient,
-    ) -> None:
-        client.cookies.clear()
-
-        response = await client.post(
-            "/v1/products",
-            json=PAYLOAD,
-        )
-
-        assert response.status_code == 401
-

@@ -32,6 +32,10 @@ class ProductService:
             description=create_schema.description,
             price=create_schema.price,
             thumb_url=create_schema.thumb_url,
+            category=create_schema.category,
+            unit=create_schema.unit,
+            gallery_urls=create_schema.gallery_urls,
+            options=create_schema.options,
         )
 
         return await product_repository.create(product, flush=True)
